@@ -10,24 +10,7 @@ from PIL import Image
 load_dotenv()
 API_KEY = os.environ.get('API_KEY')
 
-
-SYSTEM_INSTRUCTION = """
-You are a robotic monitor system. 
-
-## Input
-At each time step, you will shown images from different camera views (e.g., "left" and "right" and "overhead" cameras of the scene and "wrist" camera from the robot's end-effector).
-You might also be shown frames from k time steps ago to provide context for the current time step. Then, you're also given a task description in text.
-When we provide multiple time steps, we will also provide the "frame: {frame_idx}" for each time steps, where lower frame_idx means more distant time step in the past, and highest frame_idx
-in the sequence is the most recent time step.
-
-## Task
-Your task is to examine all inputs, and determine the progress of the task i.e., whether the task is completed or not.
-
-
-## Output
-
-Your output should be a JSON as follows:
-
+VERBOSE_OUTPUT = """
 ```json
 {
     "detailed_description": {
@@ -38,6 +21,33 @@ Your output should be a JSON as follows:
     "completed": true/false # Whether the task is completed or not
 }
 ```
+"""
+
+SHORT_OUTPUT = """
+```json
+{
+    "completed": true/false # Whether the task is completed or not
+}
+```
+"""
+
+SYSTEM_INSTRUCTION = """
+You are a robotic monitor system. 
+
+## Input
+At each time step, you will shown images from different camera views (e.g., "left" and "right" and "overhead" cameras of the scene and "wrist" camera from the robot's end-effector).
+You might also be shown frames from k time steps ago to provide context for the current time step. Then, you're also given a task description in text.
+When we provide multiple time steps, we will also provide the "frame: {{frame_idx}}" for each time steps, where lower frame_idx means more distant time step in the past, and highest frame_idx
+in the sequence is the most recent time step.
+
+## Task
+Your task is to examine all inputs, and determine the progress of the task i.e., whether the task is completed or not.
+
+
+## Output
+
+Your output should be a JSON as follows:
+{output_format}
 Make sure that the result is a valid JSON.
 """
 
@@ -45,7 +55,8 @@ class VLMMonitor(Agent):
     OUT_RESULT_PATH = "output.json"
 
     def _make_system_instruction(self):
-        return SYSTEM_INSTRUCTION
+        output_format = VERBOSE_OUTPUT if self.cfg.use_verbose_output else SHORT_OUTPUT
+        return SYSTEM_INSTRUCTION.format(output_format=output_format)
 
     def _make_prompt_parts(self, trajectory: Dict[int, Dict[str, np.ndarray]], task_description: str):
         prompt_parts = [

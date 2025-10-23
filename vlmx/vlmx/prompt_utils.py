@@ -157,10 +157,10 @@ class QwenWrapper:
 
         # max_new_tokens = 30720
         max_new_tokens = 1024
-        print(f"DEBUG: max_new_tokens: {max_new_tokens}")
         max_new_tokens = generation_config.get("max_new_tokens", max_new_tokens)
         temperature = generation_config.get("temperature", 0.5)
         do_sample = temperature > 0
+        print(f"DEBUG: max_new_tokens: {max_new_tokens}")
 
         generated_ids = self.model.generate(
             **inputs,

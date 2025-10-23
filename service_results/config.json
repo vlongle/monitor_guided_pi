@@ -1,0 +1,4 @@
+model_name: Qwen/Qwen3-VL-2B-Instruct
+out_dir: service_results
+api_key: ''
+use_verbose_output: true

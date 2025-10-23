@@ -25,6 +25,7 @@ class AgentConfig:
     model_name: str
     out_dir: str
     api_key: Optional[str] = None
+    use_verbose_output: bool = False
 
 
 class Agent:
@@ -99,10 +100,9 @@ class Agent:
             prompt_parts,
             generation_config=gen_config,
         )
-        # logging.info(f"Usage: {response.usage_metadata}")
-
-        self.parse_response(response, **kwargs)
-        return response
+        # Parse and persist result, but return parsed object to avoid extra disk I/O by callers
+        parsed = self.parse_response(response, **kwargs)
+        return parsed
 
     def load_prediction(self):
         if ".json" in self.OUT_RESULT_PATH:
