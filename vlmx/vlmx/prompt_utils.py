@@ -18,12 +18,13 @@ from openai import OpenAI
 import torch
 import tempfile
 import os
-# from transformers import Qwen2_5_VLForConditionalGeneration, AutoProcessor
-from transformers import Qwen3VLForConditionalGeneration, AutoProcessor
+from transformers import Qwen3VLForConditionalGeneration, Qwen2_5_VLForConditionalGeneration, AutoProcessor
 from qwen_vl_utils import process_vision_info
 from PIL import Image
 from io import BytesIO
 import base64
+import torch
+
 
 def setup_gemini(model_name, system_instruction=None, api_key=None):
     logging.info(f"Setting up Google's model {model_name} with API key {api_key}")
@@ -79,12 +80,24 @@ class QwenWrapper:
         self.model_name = model_name
         self.system_instruction = system_instruction
         # self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-        self.model = Qwen3VLForConditionalGeneration.from_pretrained(
-            model_name,
-            torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
-            device_map="auto",
-        )
+        if "3" in model_name:
+            print(f"Loading Qwen3 model {model_name}")
+            self.model = Qwen3VLForConditionalGeneration.from_pretrained(
+                model_name,
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+                device_map="auto",
+            )
+        elif "2.5" in model_name:
+            print(f"Loading Qwen2.5 model {model_name}")
+            self.model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
+                model_name,
+                torch_dtype=torch.bfloat16,
+                attn_implementation="flash_attention_2",
+                device_map="auto",
+            )
+        else:
+            raise ValueError(f"Model name must contain '3' or '2.5'. Got: {model_name}")
         min_pixels = 256 * 28 * 28
         max_pixels = 512 * 28 * 28  # Reduced for memory efficiency
         self.processor = AutoProcessor.from_pretrained(
@@ -142,7 +155,8 @@ class QwenWrapper:
         )
         inputs = inputs.to("cuda")
 
-        max_new_tokens = 30720
+        # max_new_tokens = 30720
+        max_new_tokens = 1024
         print(f"DEBUG: max_new_tokens: {max_new_tokens}")
         max_new_tokens = generation_config.get("max_new_tokens", max_new_tokens)
         temperature = generation_config.get("temperature", 0.5)

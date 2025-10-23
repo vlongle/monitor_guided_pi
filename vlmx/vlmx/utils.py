@@ -506,6 +506,8 @@ def extract_camera_views_from_video(video_path: str, cam_views: List[str] = ["le
             start_x = i * view_width
             end_x = start_x + view_width
             cam_frame = frame_rgb[:, start_x:end_x, :]
+            # Resize to (294, 518) to speed up inference
+            cam_frame = cv2.resize(cam_frame, (518, 294), interpolation=cv2.INTER_AREA)
             frame_dict[cam_name] = cam_frame
         
         frames_list.append(frame_dict)

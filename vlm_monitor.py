@@ -72,6 +72,7 @@ class VLMMonitor(Agent):
                 else:
                     raise ValueError(f"Unsupported image type: {type(img_array)}")
             
+        print("Done making prompt parts")
         return prompt_parts
 
     def parse_response(self, response):
@@ -81,7 +82,7 @@ class VLMMonitor(Agent):
         parsed_response = json.loads(json_str, strict=False)
         print("parsed_response:")
         print(parsed_response)
-        save_json(parsed_response, self.OUT_RESULT_PATH)
+        save_json(parsed_response, os.path.join(self.cfg.out_dir, self.OUT_RESULT_PATH))
         return parsed_response
 
 
