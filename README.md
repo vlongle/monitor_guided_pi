@@ -9,3 +9,11 @@ QWen2.5-VL-7B-Instruct is trash.
 
 
 Down-resize image -> QWen now takes 14s.
+
+
+```
+pip install -e .
+cd vlmx
+pip install -e .
+MAX_JOBS=16 pip install -v -U flash-attn --no-build-isolation
+```
