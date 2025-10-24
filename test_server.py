@@ -40,6 +40,16 @@ def main():
     except Exception:
         print(r.text)
 
+    ## try decompose
+    payload = {
+        "task_description": "put the toy in the bowl",
+    }
+    r = requests.post(f"{base_url}/decompose", json=payload, timeout=120)
+    print("decompose:", r.status_code)
+    try:
+        print(r.json())
+    except Exception:
+        print(r.text)
 
 if __name__ == "__main__":
     main()

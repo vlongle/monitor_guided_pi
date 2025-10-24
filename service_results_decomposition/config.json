@@ -1,4 +1,4 @@
 model_name: Qwen/Qwen3-VL-8B-Instruct
-out_dir: service_results
+out_dir: service_results_decomposition
 api_key: ''
 use_verbose_output: false

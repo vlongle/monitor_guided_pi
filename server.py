@@ -22,6 +22,8 @@ from flask_cors import CORS
 import numpy as np
 
 from vlm_monitor import VLMMonitor, AgentConfig
+from task_decomposer import TaskDecomposer
+import argparse
 
 
 logging.basicConfig(
@@ -34,11 +36,14 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ServiceConfig:
-    model_name: str = "Qwen/Qwen3-VL-2B-Instruct"
+    # model_name: str = "Qwen/Qwen3-VL-2B-Instruct"
+    model_name: str = "Qwen/Qwen3-VL-8B-Instruct"
     out_dir: str = "service_results"
+    decomp_out_dir: str = "service_results_decomposition"
     api_key: str = os.getenv("VLM_API_KEY", os.getenv("GOOGLE_API_KEY", ""))
     host: str = "0.0.0.0"
     port: int = 8766
+    use_verbose_output: bool = True
 
 
 class VLMServer:
@@ -47,14 +52,17 @@ class VLMServer:
         self.app = Flask(__name__)
         CORS(self.app)
 
-        # use_verbose_output=False
-        use_verbose_output=True
-
         self.agent = VLMMonitor(AgentConfig(
             model_name=self.config.model_name,
             out_dir=self.config.out_dir,
             api_key=self.config.api_key,
-            use_verbose_output=use_verbose_output
+            use_verbose_output=self.config.use_verbose_output
+        ))
+        self.decomposer = TaskDecomposer(AgentConfig(
+            model_name=self.config.model_name,
+            out_dir=self.config.decomp_out_dir,
+            api_key=self.config.api_key,
+            use_verbose_output=False
         ))
         self.is_ready = True
         self._register_routes()
@@ -67,6 +75,7 @@ class VLMServer:
         @self.app.route('/predict', methods=['POST'])
         def predict() -> Any:
             data = request.get_json()
+            # print("Received request with data:", data)
             assert data is not None, "No JSON body provided"
             task: str = data.get("task_description")
             trajectory_json: Dict[str, Dict[str, Any]] = data.get("trajectory")
@@ -83,10 +92,30 @@ class VLMServer:
                     trajectory[frame_idx][cam_name] = arr
 
             start = time.time()
+            if self.config.use_verbose_output:
+                gen_config={"max_new_tokens": 256, "temperature": 0.1}
+            else:
+                gen_config = {"max_new_tokens": 20, "temperature": 0.1}
+
             result = self.agent.generate_prediction(trajectory, task, overwrite=True,
-            gen_config={"max_new_tokens": 256, "temperature": 0.1}
-            # gen_config={"max_new_tokens": 20, "temperature": 0.1}
+            gen_config=gen_config 
             )
+            return jsonify({
+                "success": True,
+                "result": result,
+                "latency_s": time.time() - start,
+            })
+
+        @self.app.route('/decompose', methods=['POST'])
+        def decompose() -> Any:
+            data = request.get_json()
+            assert data is not None, "No JSON body provided"
+            task: str = data.get("task_description")
+            assert task, "Missing task_description"
+
+            start = time.time()
+            gen_config = {"max_new_tokens": 128, "temperature": 0.1}
+            result = self.decomposer.generate_prediction(task, overwrite=True, gen_config=gen_config)
             return jsonify({
                 "success": True,
                 "result": result,
@@ -97,12 +126,19 @@ class VLMServer:
         self.app.run(host=self.config.host, port=self.config.port, debug=False, threaded=True)
 
 
-def main() -> None:
-    server = VLMServer(ServiceConfig())
+def main(args: argparse.Namespace) -> None:
+    server = VLMServer(ServiceConfig(
+        model_name=args.model_name,
+        use_verbose_output=args.use_verbose_output
+    ))
     server.run()
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_name", type=str, default="Qwen/Qwen3-VL-8B-Instruct")
+    parser.add_argument("--use_verbose_output", action="store_true")
+    args = parser.parse_args()
+    main(args)
 
 
